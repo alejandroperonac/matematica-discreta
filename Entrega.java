@@ -49,7 +49,7 @@ import java.util.stream.IntStream;
  * de texte estigui configurat amb codificació UTF-8.
  */
 class Entrega {
-  static final String[] NOMS = {};
+  static final String[] NOMS = {"ALEJANDRO PERONA CONTI","NOFRE PALMER SEGUI","OSCAR PASCUAL BORDOY"};
 
   /*
    * Aquí teniu els exercicis del Tema 1 (Lògica).
@@ -79,21 +79,94 @@ class Entrega {
     static final char NAND = '.';
 
     static int exercici1(char[] ops, int[] vars) {
-      throw new UnsupportedOperationException("pendent");
+      
+
+    int maxVariable = 0;
+    for (int v : vars) {
+        if (v + 1 > maxVariable) {
+            maxVariable = v + 1;
+        }
     }
 
-    /*
-     * Aquest mètode té de paràmetre l'univers (representat com un array) i els predicats
-     * adients `p` i `q`. Per avaluar aquest predicat, si `x` és un element de l'univers, podeu
-     * fer-ho com `p.test(x)`, que té com resultat un booleà (true si `P(x)` és cert).
-     *
-     * Amb l'univers i els predicats `p` i `q` donats, returnau true si la següent proposició és
-     * certa.
-     *
-     * (∀x : P(x)) <-> (∃!x : Q(x))
-     */
+    boolean allTrue = true;
+    boolean allFalse = true;
+
+    int totalStates = 1 << maxVariable;
+
+    for (int state = 0; state < totalStates; state++) {
+        boolean[] values = new boolean[maxVariable];
+        for (int i = 0; i < maxVariable; i++) {
+            values[i] = (state & (1 << i)) != 0;
+        }
+
+        boolean result = values[vars[0]];
+
+        for (int i = 0; i < ops.length; i++) {
+            boolean nextValue = values[vars[i + 1]];
+            char operator = ops[i];
+
+            switch (operator) {
+                case '∧': // CONJUNCIÓ
+                    result = result && nextValue;
+                    break;
+                case '∨': // DISJUNCIÓ
+                    result = result || nextValue;
+                    break;
+                case '→': // IMPLICACIÓ
+                    result = !result || nextValue;
+                    break;
+                case '.': // NAND
+                    result = !(result && nextValue);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Operador no soportado: " + operator);
+            }
+        }
+
+        if (result) {
+            allFalse = false;
+        } else {
+            allTrue = false;
+        }
+
+        if (!allTrue && !allFalse) {
+            break; // No es ni tautología ni contradicción
+        }
+    }
+
+    if (allTrue) {
+        return 1;
+    } else if (allFalse) {
+        return 0;
+    } else {
+        return -1;
+    }
+    }
+    
     static boolean exercici2(int[] universe, Predicate<Integer> p, Predicate<Integer> q) {
-      throw new UnsupportedOperationException("pendent");
+    // Comprobar si ∀x P(x) es cierto
+    boolean allP = true;
+    for (int x : universe) {
+        if (!p.test(x)) {
+            allP = false;
+            break;
+        }
+    }
+
+    // Contar cuántos x cumplen Q(x)
+    int countQ = 0;
+    for (int x : universe) {
+        if (q.test(x)) {
+            countQ++;
+            if (countQ > 1) break; // no hace falta seguir si ya hay más de uno
+        }
+    }
+
+    // Comprobar si existe exactamente un x tal que Q(x)
+    boolean existsUniqueQ = (countQ == 1);
+
+    // Retornar si (∀x : P(x)) <-> (∃!x : Q(x))
+    return allP == existsUniqueQ;
     }
 
     static void tests() {
@@ -147,8 +220,27 @@ class Entrega {
      * Pista: Cercau informació sobre els nombres de Stirling.
      */
     static int exercici1(int[] a) {
-      throw new UnsupportedOperationException("pendent");
+    int n = a.length;
+
+    int[][] stirling = new int[n + 1][n + 1];
+    stirling[0][0] = 1;
+
+    for (int i = 1; i <= n; i++) {
+      for (int k = 1; k <= i; k++) {
+        stirling[i][k] = k * stirling[i - 1][k] + stirling[i - 1][k - 1];
+      }
     }
+
+    int bell = 0;
+    for (int k = 1; k <= n; k++) {
+      bell += stirling[n][k];
+    }
+
+    return bell;
+    }
+
+ 
+    
 
     /*
      * Trobau el cardinal de la relació d'ordre parcial sobre `a` més petita que conté `rel` (si
@@ -158,19 +250,172 @@ class Entrega {
      * Si no existeix, retornau -1.
      */
     static int exercici2(int[] a, int[][] rel) {
-      throw new UnsupportedOperationException("pendent");
+    int n = a.length;
+
+    // Creamos matriz booleana para la relación (para hacer clausuras fácilmente)
+    boolean[][] R = new boolean[n][n];
+
+    // Mapear valores de a a índices para facilidad
+    // Como a está ordenado y es conjunto sin repetidos, podemos buscar índices con binaria o lineal (a[i] == val)
+    // Aquí busco índice lineal (podría optimizarse)
+    // Función para obtener índice de un valor en a
+    java.util.function.IntUnaryOperator idx = (v) -> {
+        for (int i = 0; i < n; i++) if (a[i] == v) return i;
+        return -1;
+    };
+
+    // Inicializar matriz vacía
+    for (int i = 0; i < n; i++) 
+        for (int j = 0; j < n; j++) 
+            R[i][j] = false;
+
+    // Añadir pares de rel (mapeando a índices)
+    for (int[] p : rel) {
+        int x = idx.applyAsInt(p[0]);
+        int y = idx.applyAsInt(p[1]);
+        if (x == -1 || y == -1) return -1; // par no en el conjunto
+        R[x][y] = true;
     }
 
-    /*
-     * Donada una relació d'ordre parcial `rel` definida sobre `a` i un subconjunt `x` de `a`,
-     * retornau:
-     * - L'ínfim de `x` si existeix i `op` és false
-     * - El suprem de `x` si existeix i `op` és true
-     * - null en qualsevol altre cas
-     */
-    static Integer exercici3(int[] a, int[][] rel, int[] x, boolean op) {
-      throw new UnsupportedOperationException("pendent");
+    // Clausura reflexiva
+    for (int i = 0; i < n; i++) {
+        R[i][i] = true;
     }
+
+    // Clausura transitiva (Floyd-Warshall boolean)
+    for (int k = 0; k < n; k++) {
+        for (int i = 0; i < n; i++) {
+            if (R[i][k]) {
+                for (int j = 0; j < n; j++) {
+                    if (R[k][j]) {
+                        R[i][j] = true;
+                    }
+                }
+            }
+        }
+    }
+
+    // Verificar antisimetría: si (i,j) y (j,i) están en R y i != j, entonces no es orden parcial
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i != j && R[i][j] && R[j][i]) {
+                return -1;
+            }
+        }
+    }
+
+    // Contar número de pares en la clausura
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (R[i][j]) count++;
+        }
+    }
+
+    return count;
+}
+
+
+static Integer exercici3(int[] a, int[][] rel, int[] x, boolean op) {
+    int n = a.length;
+
+    // Igual que en ejercicio 2, mapeo valores a índices
+    java.util.function.IntUnaryOperator idx = (v) -> {
+        for (int i = 0; i < n; i++) if (a[i] == v) return i;
+        return -1;
+    };
+
+    boolean[][] R = new boolean[n][n];
+    for (int i = 0; i < n; i++) 
+        for (int j = 0; j < n; j++) 
+            R[i][j] = false;
+
+    // Añadir pares de rel (suponemos que es un orden parcial ya)
+    for (int[] p : rel) {
+        int x1 = idx.applyAsInt(p[0]);
+        int y1 = idx.applyAsInt(p[1]);
+        if (x1 == -1 || y1 == -1) return null;
+        R[x1][y1] = true;
+    }
+
+    // Para cada valor de x buscamos índice
+    int[] indicesX = new int[x.length];
+    for (int i = 0; i < x.length; i++) {
+        int ix = idx.applyAsInt(x[i]);
+        if (ix == -1) return null;
+        indicesX[i] = ix;
+    }
+
+    // INFIM (op == false)
+    if (!op) {
+        // Ínfim: máximo elemento que está debajo de todos los de x
+        // Buscamos i en a tal que para todo j en indicesX: R[i][j] == true
+        // Y que i sea máximo (no hay k != i con R[i][k] y R[k][j] para todos j)
+        // Simplificamos buscando todos los candidatos y elegimos el que no hay otro mayor
+
+        // Paso 1: candidatos i con R[i][j] para todo j
+        ArrayList<Integer> candidatos = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            boolean cumple = true;
+            for (int j : indicesX) {
+                if (!R[i][j]) {
+                    cumple = false;
+                    break;
+                }
+            }
+            if (cumple) candidatos.add(i);
+        }
+
+        // Paso 2: buscar máximo de candidatos: no existe otro candidato mayor que él
+        for (int c : candidatos) {
+            boolean esMaximo = true;
+            for (int c2 : candidatos) {
+                if (c != c2 && R[c][c2]) {
+                    esMaximo = false;
+                    break;
+                }
+            }
+            if (esMaximo) {
+                return a[c];
+            }
+        }
+
+        return null; // no hay ínfim
+    } else {
+        // SUPREM (op == true)
+        // Mínimo elemento que está por encima de todos los de x
+        // Buscamos i tal que para todo j: R[j][i] == true
+        // Y i mínimo (no hay k != i con R[k][i] y R[j][k] para todos j)
+
+        ArrayList<Integer> candidatos = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            boolean cumple = true;
+            for (int j : indicesX) {
+                if (!R[j][i]) {
+                    cumple = false;
+                    break;
+                }
+            }
+            if (cumple) candidatos.add(i);
+        }
+
+        // Buscar mínimo candidato: no hay otro candidato menor (candidato k con R[k][i])
+        for (int c : candidatos) {
+            boolean esMinimo = true;
+            for (int c2 : candidatos) {
+                if (c != c2 && R[c2][c]) {
+                    esMinimo = false;
+                    break;
+                }
+            }
+            if (esMinimo) {
+                return a[c];
+            }
+        }
+
+        return null; // no hay suprem
+    }
+}
 
     /*
      * Donada una funció `f` de `a` a `b`, retornau:
@@ -180,8 +425,107 @@ class Entrega {
      *  - Sinó, null.
      */
     static int[][] exercici4(int[] a, int[] b, Function<Integer, Integer> f) {
-      throw new UnsupportedOperationException("pendent");
+    // a = dominio, b = codominio
+
+    // 1) Intentar encontrar la inversa exacta:
+    // Para cada y en b, debe existir exactamente un x en a con f(x) = y
+    int n = b.length;
+    int m = a.length;
+
+    int[][] invExacta = new int[n][2];
+    boolean[] asignadoExacta = new boolean[n];
+
+    for (int i = 0; i < n; i++) asignadoExacta[i] = false;
+
+    for (int i = 0; i < m; i++) {
+        int x = a[i];
+        int y = f.apply(x);
+        // Buscar índice de y en b
+        int idx = -1;
+        for (int j = 0; j < n; j++) {
+            if (b[j] == y) {
+                idx = j;
+                break;
+            }
+        }
+        if (idx == -1) return null; // y no está en codominio b
+
+        if (asignadoExacta[idx]) return null; // más de un x con mismo y -> no inversa exacta
+
+        asignadoExacta[idx] = true;
+        invExacta[idx][0] = y;
+        invExacta[idx][1] = x;
     }
+
+    // Comprobar que todos y en b tienen asignado un x
+    for (int i = 0; i < n; i++) {
+        if (!asignadoExacta[i]) return null; // no existe preimagen para algún y
+    }
+
+    // La inversa exacta existe, devolvemos ordenado lex
+    return lexSorted(invExacta);
+    }
+
+  /*
+   * Ordena lexicogràficament un array de 2 dimensions
+   */
+  static int[][] lexSorted(int[][] arr) {
+    if (arr == null) return null;
+
+    int[][] copia = Arrays.copyOf(arr, arr.length);
+    Arrays.sort(copia, Arrays::compare);
+    return copia;
+  }
+
+  /*
+   * Genera un array int[][] amb els elements {a, b} (a de as, b de bs) que satisfan pred.test(a,b)
+   */
+  static int[][] generateRel(int[] as, int[] bs, BiPredicate<Integer, Integer> pred) {
+    List<int[]> rel = new ArrayList<>();
+
+    for (int a : as) {
+      for (int b : bs) {
+        if (pred.test(a, b)) {
+          rel.add(new int[] { a, b });
+        }
+      }
+    }
+
+    return rel.toArray(new int[0][0]);
+  }
+
+  // Especialització de generateRel per as = bs
+  static int[][] generateRel(int[] as, BiPredicate<Integer, Integer> pred) {
+    return generateRel(as, as, pred);
+  }
+
+  // Tests simplificats
+  public static void main(String[] args) {
+    System.out.println("Exercici 1:");
+    System.out.println(exercici1(new int[] { 1 }));            // Esperat 1
+    System.out.println(exercici1(new int[] { 1, 2, 3 }));      // Esperat 5
+
+    System.out.println("Exercici 2:");
+    int[] INT02 = { 0, 1, 2 };
+    System.out.println(exercici2(INT02, new int[][] { { 0, 1 }, { 1, 2 } }));                 // Esperat 6
+    System.out.println(exercici2(INT02, new int[][] { { 0, 1 }, { 1, 0 }, { 1, 2 } }));       // Esperat -1
+
+    System.out.println("Exercici 3:");
+    int[] INT15 = { 1, 2, 3, 4, 5 };
+    int[][] DIV15 = generateRel(INT15, (n, m) -> m % n == 0);
+    System.out.println(exercici3(INT15, DIV15, new int[] { 2, 3 }, false));  // Esperat 1 (ínfim)
+    System.out.println(exercici3(INT15, DIV15, new int[] { 2, 3 }, true));   // Esperat null (no suprem)
+
+    System.out.println("Exercici 4:");
+    int[] INT05 = { 0, 1, 2, 3, 4, 5 };
+    int[] INT02b = { 0, 1, 2 };
+    int[][] inv1 = exercici4(INT05, INT02b, x -> x / 2);
+    System.out.println(Arrays.deepToString(inv1));
+
+    int[][] inv2 = exercici4(INT02b, INT05, x -> x);
+    System.out.println(Arrays.deepToString(inv2));
+  }
+
 
     /*
      * Aquí teniu alguns exemples i proves relacionades amb aquests exercicis (vegeu `main`)
@@ -255,48 +599,7 @@ class Entrega {
       });
     }
 
-    /*
-     * Ordena lexicogràficament un array de 2 dimensions
-     * Per exemple:
-     *  arr = {{1,0}, {2,2}, {0,1}}
-     *  resultat = {{0,1}, {1,0}, {2,2}}
-     */
-    static int[][] lexSorted(int[][] arr) {
-      if (arr == null)
-        return null;
-
-      var arr2 = Arrays.copyOf(arr, arr.length);
-      Arrays.sort(arr2, Arrays::compare);
-      return arr2;
-    }
-
-    /*
-     * Genera un array int[][] amb els elements {a, b} (a de as, b de bs) que satisfàn pred.test(a, b)
-     * Per exemple:
-     *   as = {0, 1}
-     *   bs = {0, 1, 2}
-     *   pred = (a, b) -> a == b
-     *   resultat = {{0,0}, {1,1}}
-     */
-    static int[][] generateRel(int[] as, int[] bs, BiPredicate<Integer, Integer> pred) {
-      var rel = new ArrayList<int[]>();
-
-      for (int a : as) {
-        for (int b : bs) {
-          if (pred.test(a, b)) {
-            rel.add(new int[] { a, b });
-          }
-        }
-      }
-
-      return rel.toArray(new int[][] {});
-    }
-
-    // Especialització de generateRel per as = bs
-    static int[][] generateRel(int[] as, BiPredicate<Integer, Integer> pred) {
-      return generateRel(as, as, pred);
-    }
-  }
+}
 
   /*
    * Aquí teniu els exercicis del Tema 3 (Grafs).
@@ -523,5 +826,3 @@ class Entrega {
     }
   }
 }
-
-// vim: set textwidth=100 shiftwidth=2 expandtab :
