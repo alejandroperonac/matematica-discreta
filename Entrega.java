@@ -425,46 +425,66 @@ static Integer exercici3(int[] a, int[][] rel, int[] x, boolean op) {
      *  - Sinó, null.
      */
     static int[][] exercici4(int[] a, int[] b, Function<Integer, Integer> f) {
-    // a = dominio, b = codominio
+    int nB = b.length, nA = a.length;
 
-    // 1) Intentar encontrar la inversa exacta:
-    // Para cada y en b, debe existir exactamente un x en a con f(x) = y
-    int n = b.length;
-    int m = a.length;
+    /* -------- taules auxiliars ---------- */
+    // imatges: y = f(x)           (longitud nA)
+    int[] img = new int[nA];
+    for (int i = 0; i < nA; i++) img[i] = f.apply(a[i]);
 
-    int[][] invExacta = new int[n][2];
-    boolean[] asignadoExacta = new boolean[n];
+    // aparellar y → primer x amb f(x)=y  (per possible inversa dreta)
+    int[] primerX = new int[nB];          // −1 si encara no trobat
+    for (int i = 0; i < nB; i++) primerX[i] = -1;
 
-    for (int i = 0; i < n; i++) asignadoExacta[i] = false;
+    boolean injectiva = true;
+    boolean sobrejectiva = true;
 
-    for (int i = 0; i < m; i++) {
-        int x = a[i];
-        int y = f.apply(x);
-        // Buscar índice de y en b
-        int idx = -1;
-        for (int j = 0; j < n; j++) {
-            if (b[j] == y) {
-                idx = j;
-                break;
-            }
+    for (int i = 0; i < nA; i++) {
+        int y = img[i];
+
+        /* buscar y a b[] */
+        int posY = -1;
+        for (int j = 0; j < nB; j++)
+            if (b[j] == y) { posY = j; break; }
+
+        if (posY == -1) sobrejectiva = false;          // y fora del codomini
+
+        if (posY != -1) {
+            if (primerX[posY] == -1) primerX[posY] = a[i];
+            else injectiva = false;                    // dos x comparteixen y
         }
-        if (idx == -1) return null; // y no está en codominio b
+    }
+    for (int j = 0; j < nB; j++) if (primerX[j] == -1) sobrejectiva = false;
 
-        if (asignadoExacta[idx]) return null; // más de un x con mismo y -> no inversa exacta
-
-        asignadoExacta[idx] = true;
-        invExacta[idx][0] = y;
-        invExacta[idx][1] = x;
+    /* -------- inversa exacta (bijectiva) -------- */
+    if (injectiva && sobrejectiva) {
+        int[][] inv = new int[nB][2];
+        for (int j = 0; j < nB; j++) { inv[j][0] = b[j]; inv[j][1] = primerX[j]; }
+        return lexSorted(inv);
     }
 
-    // Comprobar que todos y en b tienen asignado un x
-    for (int i = 0; i < n; i++) {
-        if (!asignadoExacta[i]) return null; // no existe preimagen para algún y
+    /* -------- inversa per l’esquerra (només injectiva) -------- */
+    if (injectiva) {
+        int[][] invE = new int[nA][2];                 // un parell per cada x
+        for (int i = 0; i < nA; i++) {
+            invE[i][0] = img[i];                       // y
+            invE[i][1] = a[i];                         // x
+        }
+        return lexSorted(invE);
     }
 
-    // La inversa exacta existe, devolvemos ordenado lex
-    return lexSorted(invExacta);
+    /* -------- inversa per la dreta (només sobrejectiva) -------- */
+    if (sobrejectiva) {
+        int[][] invD = new int[nB][2];
+        for (int j = 0; j < nB; j++) {
+            invD[j][0] = b[j];
+            invD[j][1] = primerX[j];                   // algun x amb f(x)=y
+        }
+        return lexSorted(invD);
     }
+
+    return null;                                       // cap inversa vàlida
+}
 
   /*
    * Ordena lexicogràficament un array de 2 dimensions
@@ -615,20 +635,102 @@ static Integer exercici3(int[] a, int[][] rel, int[] x, boolean op) {
    * };
    */
   static class Tema3 {
-    /*
-     * Determinau si el graf `g` (no dirigit) té cicles.
-     */
-    static boolean exercici1(int[][] g) {
-      throw new UnsupportedOperationException("pendent");
+   static boolean exercici1(int[][] g) {
+    boolean[] visitat = new boolean[g.length];
+
+    for (int v = 0; v < g.length; v++) {
+        if (!visitat[v]) {
+            if (téCicle(v, -1, visitat, g)) {
+                return true;
+            }
+        }
     }
+    return false;
+}
+
+static boolean téCicle(int actual, int pare, boolean[] visitat, int[][] g) {
+    visitat[actual] = true;
+
+    for (int veí : g[actual]) {
+        if (!visitat[veí]) {
+            if (téCicle(veí, actual, visitat, g)) {
+                return true;
+            }
+        } else if (veí != pare) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
     /*
      * Determinau si els dos grafs són isomorfs. Podeu suposar que cap dels dos té ordre major que
      * 10.
      */
     static boolean exercici2(int[][] g1, int[][] g2) {
-      throw new UnsupportedOperationException("pendent");
+    int n = g1.length;
+
+    if (g2.length != n)
+        return false;
+
+    int[] perm = new int[n];
+    for (int i = 0; i < n; i++) perm[i] = i;
+
+    do {
+        if (ésIsomorf(g1, g2, perm))
+            return true;
+    } while (nextPermutation(perm));
+
+    return false;
+}
+
+static boolean ésIsomorf(int[][] g1, int[][] g2, int[] perm) {
+    int n = g1.length;
+    for (int i = 0; i < n; i++) {
+        int[] veïns1 = g1[i];
+        int[] veïns2 = g2[perm[i]];
+
+        int comptador = 0;
+        for (int j = 0; j < n; j++) {
+            if (ésVeí(veïns1, j)) {
+                if (!ésVeí(veïns2, perm[j]))
+                    return false;
+                comptador++;
+            }
+        }
+
+        if (comptador != veïns2.length)
+            return false;
     }
+    return true;
+}
+
+static boolean ésVeí(int[] veïns, int v) {
+    for (int i = 0; i < veïns.length; i++) {
+        if (veïns[i] == v) return true;
+    }
+    return false;
+}
+
+// Genera la següent permutació lexicogràfica (com la de next_permutation en C++)
+static boolean nextPermutation(int[] a) {
+    int i = a.length - 2;
+    while (i >= 0 && a[i] >= a[i + 1]) i--;
+
+    if (i < 0) return false;
+
+    int j = a.length - 1;
+    while (a[j] <= a[i]) j--;
+
+    int temp = a[i]; a[i] = a[j]; a[j] = temp;
+
+    for (int l = i + 1, r = a.length - 1; l < r; l++, r--) {
+        temp = a[l]; a[l] = a[r]; a[r] = temp;
+    }
+
+    return true;
+}
 
     /*
      * Determinau si el graf `g` (no dirigit) és un arbre. Si ho és, retornau el seu recorregut en
@@ -638,8 +740,52 @@ static Integer exercici3(int[] a, int[][] rel, int[] x, boolean op) {
      * vèrtex.
      */
     static int[] exercici3(int[][] g, int r) {
-      throw new UnsupportedOperationException("pendent");
+    int n = g.length;
+    boolean[] visitat = new boolean[n];
+    List<Integer> postordre = new ArrayList<>();
+    boolean[] hiHaCicle = new boolean[1]; // Flag para detectar ciclos
+
+    dfs(r, -1, g, visitat, postordre, hiHaCicle);
+
+    // Si hay ciclo detectado, no es árbol
+    if (hiHaCicle[0]) return null;
+
+    // Si algún vértice no fue visitado, no es conexo → no es árbol
+    for (int i = 0; i < n; i++) {
+        if (!visitat[i]) return null;
     }
+
+    // El número de aristas debe ser n - 1 para ser árbol
+    // Contamos las aristas en el grafo
+    int edgeCount = 0;
+    for (int i = 0; i < n; i++) {
+        edgeCount += g[i].length;
+    }
+    // Como el grafo es no dirigido, cada arista está contada dos veces
+    edgeCount /= 2;
+    if (edgeCount != n - 1) return null;
+
+    // Convertimos la lista postorden a array (el postorden está en orden correcto)
+    int[] resultat = new int[n];
+    for (int i = 0; i < n; i++) {
+        resultat[i] = postordre.get(i);
+    }
+
+    return resultat;
+}
+
+static void dfs(int node, int pare, int[][] g, boolean[] visitat, List<Integer> postordre, boolean[] hiHaCicle) {
+    visitat[node] = true;
+    for (int veí : g[node]) {
+        if (!visitat[veí]) {
+            dfs(veí, node, g, visitat, postordre, hiHaCicle);
+        } else if (veí != pare) {
+            // Hay ciclo
+            hiHaCicle[0] = true;
+        }
+    }
+    postordre.add(node);
+}
 
     /*
      * Suposau que l'entrada és un mapa com el següent, donat com String per files (vegeu els tests)
@@ -666,8 +812,69 @@ static Integer exercici3(int[] a, int[][] rel, int[] x, boolean op) {
      * Si és impossible, retornau -1.
      */
     static int exercici4(char[][] mapa) {
-      throw new UnsupportedOperationException("pendent");
+    int files = mapa.length;
+    int cols = mapa[0].length;
+
+    int origenX = -1, origenY = -1;
+    int destiX = -1, destiY = -1;
+
+    // Cerquem 'O' i 'D'
+    for (int i = 0; i < files; i++) {
+        for (int j = 0; j < cols; j++) {
+            if (mapa[i][j] == 'O') {
+                origenX = i;
+                origenY = j;
+            }
+            if (mapa[i][j] == 'D') {
+                destiX = i;
+                destiY = j;
+            }
+        }
     }
+
+    if (origenX == -1 || destiX == -1) return -1;
+
+    // BFS
+    int[][] dist = new int[files][cols];
+    boolean[][] visitat = new boolean[files][cols];
+    int[] dx = { -1, 1, 0, 0 }; // amunt, avall, esquerra, dreta
+    int[] dy = { 0, 0, -1, 1 };
+
+    int[][] cua = new int[files * cols][2];
+    int cap = 0, cuaFi = 0;
+
+    cua[cuaFi][0] = origenX;
+    cua[cuaFi][1] = origenY;
+    cuaFi++;
+    visitat[origenX][origenY] = true;
+    dist[origenX][origenY] = 0;
+
+    while (cap < cuaFi) {
+        int x = cua[cap][0];
+        int y = cua[cap][1];
+        cap++;
+
+        if (x == destiX && y == destiY) {
+            return dist[x][y];
+        }
+
+        for (int d = 0; d < 4; d++) {
+            int nx = x + dx[d];
+            int ny = y + dy[d];
+
+            if (nx >= 0 && nx < files && ny >= 0 && ny < cols &&
+                !visitat[nx][ny] && mapa[nx][ny] != '#') {
+                visitat[nx][ny] = true;
+                dist[nx][ny] = dist[x][y] + 1;
+                cua[cuaFi][0] = nx;
+                cua[cuaFi][1] = ny;
+                cuaFi++;
+            }
+        }
+    }
+
+    return -1; // si no s'arriba mai a 'D'
+}
 
     /*
      * Aquí teniu alguns exemples i proves relacionades amb aquests exercicis (vegeu `main`)
