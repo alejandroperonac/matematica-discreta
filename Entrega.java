@@ -80,95 +80,103 @@ class Entrega {
 
     static int exercici1(char[] ops, int[] vars) {
       
-
-    int maxVariable = 0;
-    for (int v : vars) {
-        if (v + 1 > maxVariable) {
-            maxVariable = v + 1;
-        }
-    }
-
-    boolean allTrue = true;
-    boolean allFalse = true;
-
-    int totalStates = 1 << maxVariable;
-
-    for (int state = 0; state < totalStates; state++) {
-        boolean[] values = new boolean[maxVariable];
-        for (int i = 0; i < maxVariable; i++) {
-            values[i] = (state & (1 << i)) != 0;
-        }
-
-        boolean result = values[vars[0]];
-
-        for (int i = 0; i < ops.length; i++) {
-            boolean nextValue = values[vars[i + 1]];
-            char operator = ops[i];
-
-            switch (operator) {
-                case '∧': // CONJUNCIÓ
-                    result = result && nextValue;
-                    break;
-                case '∨': // DISJUNCIÓ
-                    result = result || nextValue;
-                    break;
-                case '→': // IMPLICACIÓ
-                    result = !result || nextValue;
-                    break;
-                case '.': // NAND
-                    result = !(result && nextValue);
-                    break;
-                default:
-                    throw new IllegalArgumentException("Operador no soportado: " + operator);
+        // calcular maximo indice de las variables
+        int maxVariable = 0;
+        for (int v : vars){
+            if(v>maxVariable){
+            maxVariable = v;
             }
         }
+        // el numero de variables sera 1 mas grande que el indice maximo
+        int numVariables = maxVariable + 1;
+        // el total de combinaciones es igual a: 2^numeroVariables
+        int totalCombinaciones = (int) Math.pow((2), numVariables);
+        
+        boolean[][] combinaciones = generarCombinaciones(numVariables,totalCombinaciones);
+        
+        boolean resultado;
+        boolean tautologia = true;
+        boolean contradiccion = true;
+        
+        for (int i=0;i<totalCombinaciones;i++){
+            resultado = combinaciones[i][vars[0]];
+            for (int j=0;j<ops.length;j++){
+                boolean proximo = combinaciones[i][vars[j+1]];
+                resultado = realizarOperacion(resultado,proximo,ops[j]);
+            }
 
-        if (result) {
-            allFalse = false;
-        } else {
-            allTrue = false;
+            // si es cierto alguna vez significa que no es una contradiccion
+            if (resultado) contradiccion=false;
+            // si no se cumple alguna vez no es una tautologia
+            else tautologia=false;   
         }
-
-        if (!allTrue && !allFalse) {
-            break; // No es ni tautología ni contradicción
-        }
-    }
-
-    if (allTrue) {
-        return 1;
-    } else if (allFalse) {
-        return 0;
-    } else {
+        
+        if (tautologia) return 1;
+        if (contradiccion) return 0;
         return -1;
     }
+   
+    static boolean[][] generarCombinaciones (int numVariables, int totalCombinaciones) {
+        boolean combinaciones[][]= new boolean [totalCombinaciones][numVariables];
+           
+        for (int i=0; i<totalCombinaciones;i++){
+            for (int j=0;j<numVariables;j++){
+                // si la variable tiene un 1/0 devolvera true/false
+                combinaciones[i][j] = (i / (int) Math.pow(2, j)) % 2 ==1;
+            }
+        }
+        return combinaciones;
+    }
+    static boolean realizarOperacion(boolean a, boolean b, char operacion){
+        
+        switch (operacion){
+            case CONJ : return a&&b;
+            case DISJ : return a || b;
+            case IMPL : return !a || b;
+            case NAND : return !(a&&b);
+            default : return false;
+        }
+    }
+
+    /*
+     * Aquest mètode té de paràmetre l'univers (representat com un array) i els predicats
+     * adients `p` i `q`. Per avaluar aquest predicat, si `x` és un element de l'univers, podeu
+     * fer-ho com `p.test(x)`, que té com resultat un booleà (true si `P(x)` és cert).
+     *
+     * Amb l'univers i els predicats `p` i `q` donats, returnau true si la següent proposició és
+     * certa.
+     *
+     * (∀x : P(x)) <-> (∃!x : Q(x))
+     */
+    static boolean exercici2(int[] universe, Predicate<Integer> p, Predicate<Integer> q) {
+      
+        boolean cumplenP = true;
+        // comprobamos para todos los x si se cumple P, si hay alguno que no, devuelve false
+        for (int x:universe) {
+            if(!p.test(x)) {
+                cumplenP=false;
+                break;
+            }
+        }
+        
+        boolean unicoQ = false;
+        int contadorQ = 0;
+        // comprobamos la cantidad de x que cumplen Q, devuelve true si hay exactamente 1
+        for (int x:universe) {
+            if (q.test(x)){
+                contadorQ++;
+            }
+            if (contadorQ>1) {
+                break;
+            }
+        }
+        if (contadorQ==1){
+            unicoQ=true;
+        }
+        // si se cumple P y Q o no se cumple ninguno de los dos, devuelve true
+        return cumplenP==unicoQ;
     }
     
-    static boolean exercici2(int[] universe, Predicate<Integer> p, Predicate<Integer> q) {
-    // Comprobar si ∀x P(x) es cierto
-    boolean allP = true;
-    for (int x : universe) {
-        if (!p.test(x)) {
-            allP = false;
-            break;
-        }
-    }
-
-    // Contar cuántos x cumplen Q(x)
-    int countQ = 0;
-    for (int x : universe) {
-        if (q.test(x)) {
-            countQ++;
-            if (countQ > 1) break; // no hace falta seguir si ya hay más de uno
-        }
-    }
-
-    // Comprobar si existe exactamente un x tal que Q(x)
-    boolean existsUniqueQ = (countQ == 1);
-
-    // Retornar si (∀x : P(x)) <-> (∃!x : Q(x))
-    return allP == existsUniqueQ;
-    }
-
     static void tests() {
       // Exercici 1
       // Taules de veritat
@@ -952,9 +960,46 @@ static void dfs(int node, int pare, int[][] g, boolean[] visitat, List<Integer> 
      *
      * Pista: https://en.wikipedia.org/wiki/Exponentiation_by_squaring
      */
-    static int[] exercici1(String msg, int n, int e) {
-      throw new UnsupportedOperationException("pendent");
+      
+    // Función para elevar un entero buscando el módulo para que no se nos pase de tamaño
+    static int modPow(int base, int exp, int mod) {
+        long result = 1;
+        long b = base % mod;
+        while (exp > 0) {
+            if ((exp & 1) == 1) {
+                result = (result * b) % mod;
+            }
+            b = (b * b) % mod;
+            exp >>= 1;
+        }
+        return (int) result;
     }
+     // Función que busca el inverso de e módulo n.
+    static int modInverse(int a, int m) {
+        int m0 = m, x0 = 0, x1 = 1;
+        if (m == 1) return 0;
+        while (a > 1) {
+            int q = a / m;
+            int t = m;
+            m = a % m; a = t;
+            t = x0;
+            x0 = x1 - q * x0;
+            x1 = t;
+        }
+        if (x1 < 0) x1 += m0;
+        return x1;
+    }
+    static int[] exercici1(String msg, int n, int e) {
+        int[] bloques = new int[msg.length() / 2];
+        for (int i = 0; i < msg.length(); i += 2) {
+            int c1 = msg.charAt(i);
+            int c2 = msg.charAt(i + 1);
+            int combinado = c1 * 128 + c2;              // <<7 es lo mismo que *128
+            bloques[i / 2] = modPow(combinado, e, n);
+        }
+        return bloques;
+    }
+
 
     /*
      * Primer, desencriptau el missatge utilitzant xifrat RSA amb la clau pública donada. Després
@@ -971,8 +1016,40 @@ static void dfs(int node, int pare, int[][] g, boolean[] visitat, List<Integer> 
      * - n és major que 2¹⁴, i n² és menor que Integer.MAX_VALUE
      */
     static String exercici2(int[] m, int n, int e) {
-      throw new UnsupportedOperationException("pendent");
+      // 1) Factorizamos n
+    int p = 0, q = 0;
+    for (int i = 2; i * i <= n; i++) {
+        if (n % i == 0) {
+            p = i;
+            q = n / i;
+            break;
+        }
     }
+    // 2) Calculamos phi = (p-1)*(q-1)
+    int phi = (p - 1) * (q - 1);
+
+    // 3) Calculamos d = e^{-1} mod phi
+    int d = modInverse(e, phi);
+
+    // 4) Desencriptamos cada bloque con d
+    int totalChars = m.length * 2;
+    char[] chars = new char[totalChars];
+    for (int i = 0; i < m.length; i++) {
+        int dec = modPow(m[i], d, n);
+        // 5) Descomposición big-endian base 128
+        int c1 = dec / 128;
+        int c2 = dec % 128;
+        chars[2 * i]     = (char) c1;
+        chars[2 * i + 1] = (char) c2;
+    }
+
+    // 6) Construimos y devolvemos el String
+    return new String(chars);
+    }
+
+
+// Algorisme d'Euclides Extès per trobar invers modular
+
 
     static void tests() {
       // Exercici 1
