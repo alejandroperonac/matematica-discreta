@@ -228,27 +228,33 @@ class Entrega {
      * Pista: Cercau informació sobre els nombres de Stirling.
      */
     static int exercici1(int[] a) {
-    int n = a.length;
-
-    int[][] stirling = new int[n + 1][n + 1];
-    stirling[0][0] = 1;
-
-    for (int i = 1; i <= n; i++) {
-      for (int k = 1; k <= i; k++) {
-        stirling[i][k] = k * stirling[i - 1][k] + stirling[i - 1][k - 1];
-      }
+     
+        return numeroBell(a.length);
     }
-
-    int bell = 0;
-    for (int k = 1; k <= n; k++) {
-      bell += stirling[n][k];
+    static int stirling(int n, int k, int [][]matrizMemoizacion){
+        if (k==0 || k>n) return 0;
+        if (k==n || k==n) return 1;
+        
+        if (matrizMemoizacion[n][k] !=-1) return matrizMemoizacion[n][k];
+        
+        // formula de Stirling
+        matrizMemoizacion[n][k]= k* stirling(n-1,k,matrizMemoizacion) + 
+        stirling (n-1,k-1,matrizMemoizacion);
+        
+        return matrizMemoizacion[n][k];    
     }
-
-    return bell;
+    static int numeroBell(int n){
+        // se crea una tabla para ir guardando los valores de Stirling
+        int matrizMemoizacion[][]= new int [n+1][n+1];
+        for (int [] fila: matrizMemoizacion) {
+            Arrays.fill(fila,-1);
+        }
+        int total = 0;
+        for (int k=1;k<=n;k++) {
+            total = total + stirling(n,k,matrizMemoizacion);
+        }
+        return total;    
     }
-
- 
-    
 
     /*
      * Trobau el cardinal de la relació d'ordre parcial sobre `a` més petita que conté `rel` (si
@@ -258,172 +264,144 @@ class Entrega {
      * Si no existeix, retornau -1.
      */
     static int exercici2(int[] a, int[][] rel) {
-    int n = a.length;
+        int longitud = a.length;
 
-    // Creamos matriz booleana para la relación (para hacer clausuras fácilmente)
-    boolean[][] R = new boolean[n][n];
-
-    // Mapear valores de a a índices para facilidad
-    // Como a está ordenado y es conjunto sin repetidos, podemos buscar índices con binaria o lineal (a[i] == val)
-    // Aquí busco índice lineal (podría optimizarse)
-    // Función para obtener índice de un valor en a
-    java.util.function.IntUnaryOperator idx = (v) -> {
-        for (int i = 0; i < n; i++) if (a[i] == v) return i;
-        return -1;
-    };
-
-    // Inicializar matriz vacía
-    for (int i = 0; i < n; i++) 
-        for (int j = 0; j < n; j++) 
-            R[i][j] = false;
-
-    // Añadir pares de rel (mapeando a índices)
-    for (int[] p : rel) {
-        int x = idx.applyAsInt(p[0]);
-        int y = idx.applyAsInt(p[1]);
-        if (x == -1 || y == -1) return -1; // par no en el conjunto
-        R[x][y] = true;
-    }
-
-    // Clausura reflexiva
-    for (int i = 0; i < n; i++) {
-        R[i][i] = true;
-    }
-
-    // Clausura transitiva (Floyd-Warshall boolean)
-    for (int k = 0; k < n; k++) {
-        for (int i = 0; i < n; i++) {
-            if (R[i][k]) {
-                for (int j = 0; j < n; j++) {
-                    if (R[k][j]) {
-                        R[i][j] = true;
+        boolean matrizRelacion[][] = new boolean[longitud][longitud];
+        
+        for (int pares[]:rel) {
+            int i=Arrays.binarySearch(a, pares[0]);
+            int j=Arrays.binarySearch(a, pares[1]);
+            if (i>=0 && j>=0){
+                matrizRelacion[i][j]=true;
+            }
+        }
+        // clausura reflexiva
+        for (int i=0;i<longitud;i++) {
+            matrizRelacion[i][i] = true;
+        }
+        // clausura transitiva (algoritmo Warshall)
+        for (int i=0;i<longitud;i++){
+            for (int j=0;j<longitud;j++){
+                for (int k=0;k<longitud;k++) {
+                    if (matrizRelacion[j][i] && matrizRelacion[i][k]) {
+                        matrizRelacion[j][k] = true;
                     }
                 }
             }
         }
-    }
-
-    // Verificar antisimetría: si (i,j) y (j,i) están en R y i != j, entonces no es orden parcial
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            if (i != j && R[i][j] && R[j][i]) {
-                return -1;
-            }
-        }
-    }
-
-    // Contar número de pares en la clausura
-    int count = 0;
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-            if (R[i][j]) count++;
-        }
-    }
-
-    return count;
-}
-
-
-static Integer exercici3(int[] a, int[][] rel, int[] x, boolean op) {
-    int n = a.length;
-
-    // Igual que en ejercicio 2, mapeo valores a índices
-    java.util.function.IntUnaryOperator idx = (v) -> {
-        for (int i = 0; i < n; i++) if (a[i] == v) return i;
-        return -1;
-    };
-
-    boolean[][] R = new boolean[n][n];
-    for (int i = 0; i < n; i++) 
-        for (int j = 0; j < n; j++) 
-            R[i][j] = false;
-
-    // Añadir pares de rel (suponemos que es un orden parcial ya)
-    for (int[] p : rel) {
-        int x1 = idx.applyAsInt(p[0]);
-        int y1 = idx.applyAsInt(p[1]);
-        if (x1 == -1 || y1 == -1) return null;
-        R[x1][y1] = true;
-    }
-
-    // Para cada valor de x buscamos índice
-    int[] indicesX = new int[x.length];
-    for (int i = 0; i < x.length; i++) {
-        int ix = idx.applyAsInt(x[i]);
-        if (ix == -1) return null;
-        indicesX[i] = ix;
-    }
-
-    // INFIM (op == false)
-    if (!op) {
-        // Ínfim: máximo elemento que está debajo de todos los de x
-        // Buscamos i en a tal que para todo j en indicesX: R[i][j] == true
-        // Y que i sea máximo (no hay k != i con R[i][k] y R[k][j] para todos j)
-        // Simplificamos buscando todos los candidatos y elegimos el que no hay otro mayor
-
-        // Paso 1: candidatos i con R[i][j] para todo j
-        ArrayList<Integer> candidatos = new ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            boolean cumple = true;
-            for (int j : indicesX) {
-                if (!R[i][j]) {
-                    cumple = false;
-                    break;
+        // clausura antisimetrica
+        for (int i=0;i<longitud;i++){
+            for (int j=0;j<longitud;j++){
+                // los elementos no pueden ser simetricos mientras no sean de la forma (a,a)
+                if (i!=j && matrizRelacion [i][j] && matrizRelacion [j][i]){
+                    return -1;
                 }
             }
-            if (cumple) candidatos.add(i);
         }
-
-        // Paso 2: buscar máximo de candidatos: no existe otro candidato mayor que él
-        for (int c : candidatos) {
-            boolean esMaximo = true;
-            for (int c2 : candidatos) {
-                if (c != c2 && R[c][c2]) {
-                    esMaximo = false;
-                    break;
-                }
-            }
-            if (esMaximo) {
-                return a[c];
+        int contador = 0;
+        for (int i=0;i<longitud;i++){
+            for (int j=0;j<longitud;j++){
+                if (matrizRelacion[i][j]) contador++;          
             }
         }
-
-        return null; // no hay ínfim
-    } else {
-        // SUPREM (op == true)
-        // Mínimo elemento que está por encima de todos los de x
-        // Buscamos i tal que para todo j: R[j][i] == true
-        // Y i mínimo (no hay k != i con R[k][i] y R[j][k] para todos j)
-
-        ArrayList<Integer> candidatos = new ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            boolean cumple = true;
-            for (int j : indicesX) {
-                if (!R[j][i]) {
-                    cumple = false;
-                    break;
-                }
-            }
-            if (cumple) candidatos.add(i);
-        }
-
-        // Buscar mínimo candidato: no hay otro candidato menor (candidato k con R[k][i])
-        for (int c : candidatos) {
-            boolean esMinimo = true;
-            for (int c2 : candidatos) {
-                if (c != c2 && R[c2][c]) {
-                    esMinimo = false;
-                    break;
-                }
-            }
-            if (esMinimo) {
-                return a[c];
-            }
-        }
-
-        return null; // no hay suprem
+        return contador;
     }
-}
+
+
+    /*
+     * Donada una relació d'ordre parcial `rel` definida sobre `a` i un subconjunt `x` de `a`,
+     * retornau:
+     * - L'ínfim de `x` si existeix i `op` és false
+     * - El suprem de `x` si existeix i `op` és true
+     * - null en qualsevol altre cas
+     */
+    static Integer exercici3(int[] a, int[][] rel, int[] x, boolean op) {
+        
+        int longitud=a.length;
+        boolean [][] matrizAdyacencia = new boolean [longitud][longitud];
+        for (int [] pares:rel){
+            int i=-1;
+            int j=-1;
+            for (int k=0;k<longitud;k++){
+                if (a[k]==pares[0]) i = k;
+                if (a[k]==pares[1]) j = k;
+                
+            }
+            if (i!=-1 && j!=-1) {
+                matrizAdyacencia[i][j]=true;
+            }
+        }
+        // clausura reflexiva
+        for (int i=0;i<longitud;i++) {
+            matrizAdyacencia[i][i] = true;
+        }
+        // clausura transitiva (algoritmo Warshall)
+        for (int i=0;i<longitud;i++){
+            for (int j=0;j<longitud;j++){
+                for (int k=0;k<longitud;k++) {
+                    if (matrizAdyacencia[j][i] && matrizAdyacencia[i][k]) {
+                        matrizAdyacencia[j][k] = true;
+                    }
+                }
+            }
+        }
+        
+        int mejorIndice=-1;
+        
+        for (int i=0;i<longitud;i++){
+            boolean esValido=true;
+            
+            for (int j=0;j<longitud;j++){
+                
+                boolean estaEnX=false;
+                for (int v:x){
+                    if (a[j]==v){
+                        estaEnX=true;
+                        break;
+                    }
+                }
+                
+                if (!estaEnX) continue;
+                
+                if (op){
+                    if (!matrizAdyacencia[j][i]){
+                        esValido=false;
+                        break;
+                    }
+                }
+                else {
+                    if (!matrizAdyacencia[i][j]){
+                        esValido=false;
+                        break;
+                    }
+                }
+            }
+            if (esValido) {
+                if (mejorIndice==-1){
+                    mejorIndice=i;
+                }
+                else {
+                    if (op){
+                        if(matrizAdyacencia[i][mejorIndice]) {
+                            mejorIndice=i;
+                        }
+                    }
+                    else {
+                        if(matrizAdyacencia[mejorIndice][i]) {
+                            mejorIndice=i;
+                        }
+                    }    
+                }
+            }     
+        }
+        
+        if (mejorIndice==-1){
+            return null;
+        }
+        else { return a[mejorIndice];
+            
+    }
+    }
 
     /*
      * Donada una funció `f` de `a` a `b`, retornau:
@@ -433,131 +411,133 @@ static Integer exercici3(int[] a, int[][] rel, int[] x, boolean op) {
      *  - Sinó, null.
      */
     static int[][] exercici4(int[] a, int[] b, Function<Integer, Integer> f) {
-    int nB = b.length, nA = a.length;
-
-    /* -------- taules auxiliars ---------- */
-    // imatges: y = f(x)           (longitud nA)
-    int[] img = new int[nA];
-    for (int i = 0; i < nA; i++) img[i] = f.apply(a[i]);
-
-    // aparellar y → primer x amb f(x)=y  (per possible inversa dreta)
-    int[] primerX = new int[nB];          // −1 si encara no trobat
-    for (int i = 0; i < nB; i++) primerX[i] = -1;
-
-    boolean injectiva = true;
-    boolean sobrejectiva = true;
-
-    for (int i = 0; i < nA; i++) {
-        int y = img[i];
-
-        /* buscar y a b[] */
-        int posY = -1;
-        for (int j = 0; j < nB; j++)
-            if (b[j] == y) { posY = j; break; }
-
-        if (posY == -1) sobrejectiva = false;          // y fora del codomini
-
-        if (posY != -1) {
-            if (primerX[posY] == -1) primerX[posY] = a[i];
-            else injectiva = false;                    // dos x comparteixen y
+       
+        int longitudA=a.length;
+        int longitudB=b.length;
+        int []imagen= new int [longitudA];
+        
+        // guardar imagen en 'a'
+        for (int i=0;i<longitudA;i++){
+            imagen[i]=f.apply(a[i]);
         }
-    }
-    for (int j = 0; j < nB; j++) if (primerX[j] == -1) sobrejectiva = false;
-
-    /* -------- inversa exacta (bijectiva) -------- */
-    if (injectiva && sobrejectiva) {
-        int[][] inv = new int[nB][2];
-        for (int j = 0; j < nB; j++) { inv[j][0] = b[j]; inv[j][1] = primerX[j]; }
-        return lexSorted(inv);
-    }
-
-    /* -------- inversa per l’esquerra (només injectiva) -------- */
-    if (injectiva) {
-        int[][] invE = new int[nA][2];                 // un parell per cada x
-        for (int i = 0; i < nA; i++) {
-            invE[i][0] = img[i];                       // y
-            invE[i][1] = a[i];                         // x
+        // comprobar si es inyectiva
+        boolean inyectiva=true;
+        for (int i=0;i<longitudA;i++){
+            for (int j=i+1;j<longitudA;j++){
+                if (imagen[i]==imagen[j]){
+                    inyectiva = false;
+                    break;
+                }
+            }
+            if (!inyectiva){
+                break;
+            }    
         }
-        return lexSorted(invE);
-    }
-
-    /* -------- inversa per la dreta (només sobrejectiva) -------- */
-    if (sobrejectiva) {
-        int[][] invD = new int[nB][2];
-        for (int j = 0; j < nB; j++) {
-            invD[j][0] = b[j];
-            invD[j][1] = primerX[j];                   // algun x amb f(x)=y
+        
+        // si es inyectiva construimos inversa por izquierda extendida
+        if (inyectiva) {
+            int [][]inversaIzquierda= new int [longitudB][2];
+            for (int i=0;i<longitudB;i++){
+                int y=b[i];
+                int x=a[0];
+                
+                for (int j=0;j<longitudA;j++){
+                    if (imagen[j]==y){
+                        x=a[j];
+                        break;
+                    }
+                }
+                inversaIzquierda[i][0]=y;
+                inversaIzquierda[i][1]=x;
+            }
+            
+            return lexSorted(inversaIzquierda);
         }
-        return lexSorted(invD);
-    }
-
-    return null;                                       // cap inversa vàlida
-}
-
-  /*
-   * Ordena lexicogràficament un array de 2 dimensions
-   */
-  static int[][] lexSorted(int[][] arr) {
-    if (arr == null) return null;
-
-    int[][] copia = Arrays.copyOf(arr, arr.length);
-    Arrays.sort(copia, Arrays::compare);
-    return copia;
-  }
-
-  /*
-   * Genera un array int[][] amb els elements {a, b} (a de as, b de bs) que satisfan pred.test(a,b)
-   */
-  static int[][] generateRel(int[] as, int[] bs, BiPredicate<Integer, Integer> pred) {
-    List<int[]> rel = new ArrayList<>();
-
-    for (int a : as) {
-      for (int b : bs) {
-        if (pred.test(a, b)) {
-          rel.add(new int[] { a, b });
+        
+        // si no es inyectiva construimos la inversa por derecha
+        boolean sobreyectiva=true;
+        for (int y:b){
+            boolean encontrado=false;
+            for (int valor:imagen){
+                if(valor==y){
+                    encontrado=true;
+                    break;
+                }
+            }
+            if(!encontrado){
+                sobreyectiva=false;
+                break;
+            }
         }
-      }
+        
+        if (sobreyectiva){
+        int [][]inversaDerecha= new int[longitudB][2];
+        for (int i=0;i<longitudB;i++){
+            int y=b[i];
+            int preImagen=-1;
+            
+            for (int j=0;j<longitudA;j++){
+                
+                if (imagen[j]==y){
+                    preImagen=a[j];
+                    break;
+                }            
+            }
+            
+            if (preImagen==-1){
+                return null;
+            }            
+            inversaDerecha[i][0]=y;
+            inversaDerecha[i][1]=preImagen;
+        }
+        return lexSorted(inversaDerecha);
     }
+        return null;
+    }
+        
+    
+    /*
+     * Ordena lexicogràficament un array de 2 dimensions
+     * Per exemple:
+     *  arr = {{1,0}, {2,2}, {0,1}}
+     *  resultat = {{0,1}, {1,0}, {2,2}}
+     */
+    static int[][] lexSorted(int[][] arr) {
+      if (arr == null)
+        return null;
 
-    return rel.toArray(new int[0][0]);
-  }
-
-  // Especialització de generateRel per as = bs
-  static int[][] generateRel(int[] as, BiPredicate<Integer, Integer> pred) {
-    return generateRel(as, as, pred);
-  }
-
-  // Tests simplificats
-  public static void main(String[] args) {
-    System.out.println("Exercici 1:");
-    System.out.println(exercici1(new int[] { 1 }));            // Esperat 1
-    System.out.println(exercici1(new int[] { 1, 2, 3 }));      // Esperat 5
-
-    System.out.println("Exercici 2:");
-    int[] INT02 = { 0, 1, 2 };
-    System.out.println(exercici2(INT02, new int[][] { { 0, 1 }, { 1, 2 } }));                 // Esperat 6
-    System.out.println(exercici2(INT02, new int[][] { { 0, 1 }, { 1, 0 }, { 1, 2 } }));       // Esperat -1
-
-    System.out.println("Exercici 3:");
-    int[] INT15 = { 1, 2, 3, 4, 5 };
-    int[][] DIV15 = generateRel(INT15, (n, m) -> m % n == 0);
-    System.out.println(exercici3(INT15, DIV15, new int[] { 2, 3 }, false));  // Esperat 1 (ínfim)
-    System.out.println(exercici3(INT15, DIV15, new int[] { 2, 3 }, true));   // Esperat null (no suprem)
-
-    System.out.println("Exercici 4:");
-    int[] INT05 = { 0, 1, 2, 3, 4, 5 };
-    int[] INT02b = { 0, 1, 2 };
-    int[][] inv1 = exercici4(INT05, INT02b, x -> x / 2);
-    System.out.println(Arrays.deepToString(inv1));
-
-    int[][] inv2 = exercici4(INT02b, INT05, x -> x);
-    System.out.println(Arrays.deepToString(inv2));
-  }
-
+      var arr2 = Arrays.copyOf(arr, arr.length);
+      Arrays.sort(arr2, Arrays::compare);
+      return arr2;
+    }
 
     /*
-     * Aquí teniu alguns exemples i proves relacionades amb aquests exercicis (vegeu `main`)
+     * Genera un array int[][] amb els elements {a, b} (a de as, b de bs) que satisfàn pred.test(a, b)
+     * Per exemple:
+     *   as = {0, 1}
+     *   bs = {0, 1, 2}
+     *   pred = (a, b) -> a == b
+     *   resultat = {{0,0}, {1,1}}
      */
+    static int[][] generateRel(int[] as, int[] bs, BiPredicate<Integer, Integer> pred) {
+      var rel = new ArrayList<int[]>();
+
+      for (int a : as) {
+        for (int b : bs) {
+          if (pred.test(a, b)) {
+            rel.add(new int[] { a, b });
+          }
+        }
+      }
+
+      return rel.toArray(new int[][] {});
+    }
+
+    // Especialització de generateRel per as = bs
+    static int[][] generateRel(int[] as, BiPredicate<Integer, Integer> pred) {
+      return generateRel(as, as, pred);
+    }
+  
     static void tests() {
       // Exercici 1
       // Nombre de particions
@@ -626,7 +606,6 @@ static Integer exercici3(int[] a, int[][] rel, int[] x, boolean op) {
         return true;
       });
     }
-
 }
 
   /*
