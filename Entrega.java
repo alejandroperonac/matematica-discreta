@@ -622,102 +622,102 @@ class Entrega {
    * };
    */
   static class Tema3 {
-   static boolean exercici1(int[][] g) {
-    boolean[] visitat = new boolean[g.length];
+    /*
+     * Determinau si el graf `g` (no dirigit) té cicles.
+     */
+    static boolean exercici1(int[][] g) {
+        int longitud=g.length;
+       
+        boolean [] visitado= new boolean [longitud];
+        int [] padre = new int [longitud];
 
-    for (int v = 0; v < g.length; v++) {
-        if (!visitat[v]) {
-            if (téCicle(v, -1, visitat, g)) {
-                return true;
+        for (int j=0;j<longitud;j++){
+            padre[j]=-1;
+        } 
+        for (int i=0;i<longitud;i++){
+            if (!visitado[i]){
+                int cima=0;
+                int []pila = new int [longitud];
+                pila[cima++]=i;
+                visitado[i]=true;
+                
+                while(cima>0){
+                    int actual=pila[--cima];
+                    for (int vecino:g[actual]){
+                        if(!visitado[vecino]){
+                            visitado[vecino]=true;
+                            pila[cima++]=vecino;
+                            padre[vecino]=actual;
+                        }
+                        else if(padre[actual] != vecino){
+                            return true;
+                        }
+     
+                    }        
+                }    
             }
         }
+        return false;
     }
-    return false;
-}
-
-static boolean téCicle(int actual, int pare, boolean[] visitat, int[][] g) {
-    visitat[actual] = true;
-
-    for (int veí : g[actual]) {
-        if (!visitat[veí]) {
-            if (téCicle(veí, actual, visitat, g)) {
-                return true;
-            }
-        } else if (veí != pare) {
-            return true;
-        }
-    }
-
-    return false;
-}
+   
 
     /*
      * Determinau si els dos grafs són isomorfs. Podeu suposar que cap dels dos té ordre major que
      * 10.
      */
     static boolean exercici2(int[][] g1, int[][] g2) {
-    int n = g1.length;
-
-    if (g2.length != n)
-        return false;
-
-    int[] perm = new int[n];
-    for (int i = 0; i < n; i++) perm[i] = i;
-
-    do {
-        if (ésIsomorf(g1, g2, perm))
-            return true;
-    } while (nextPermutation(perm));
-
-    return false;
-}
-
-static boolean ésIsomorf(int[][] g1, int[][] g2, int[] perm) {
-    int n = g1.length;
-    for (int i = 0; i < n; i++) {
-        int[] veïns1 = g1[i];
-        int[] veïns2 = g2[perm[i]];
-
-        int comptador = 0;
-        for (int j = 0; j < n; j++) {
-            if (ésVeí(veïns1, j)) {
-                if (!ésVeí(veïns2, perm[j]))
-                    return false;
-                comptador++;
+        int longitud=g1.length;
+        // si los grafos no tienen el mismo nuemro de vertices no pueden ser isomorfos
+        if(longitud!=g2.length){
+            return false;
+        }
+        // convertimos a matrices de adyacencia
+        boolean [][] adj1 = new boolean [longitud][longitud];
+        boolean [][] adj2 = new boolean [longitud][longitud];
+        
+        for (int i=0;i<longitud;i++){
+            // marcart vecinos en la matriz del grafo 1
+            for (int j: g1[i]) {
+                adj1[i][j] = true;
+            }
+            // marcar vecinos en la matriz del grafo 2
+            for (int j: g2[i]){
+                adj2[i][j] = true;
             }
         }
-
-        if (comptador != veïns2.length)
-            return false;
+        int [] perm = new int [longitud];
+        boolean [] usado = new boolean [longitud];
+        
+        return esIsomorfismo(0,longitud,perm,usado,adj1,adj2);
+      
     }
-    return true;
-}
-
-static boolean ésVeí(int[] veïns, int v) {
-    for (int i = 0; i < veïns.length; i++) {
-        if (veïns[i] == v) return true;
+    static boolean esIsomorfismo(int pos, int longitud, int [] perm, boolean [] usado, boolean [][]adj1, boolean [][] adj2){
+        if (pos==longitud){
+            for (int i=0;i<longitud;i++){
+                for (int j=0;j<longitud;j++){
+                    if (adj1[i][j]!= adj2[perm[i]][perm[j]]){
+                        // si alguna arista no se conserva no es isomorfismo
+                        return false;
+                    }
+                
+                }
+            }
+            return true;
+        }
+        // bucle para probar a asignar cada vertice no usado del grafo 2 a perm[pos]
+        for (int v=0;v<longitud;v++){
+            if(!usado[v]){
+                perm[pos]=v;
+                usado[v]=true;
+                if (esIsomorfismo(pos+1,longitud,perm,usado,adj1,adj2)){
+                    return true;    
+                }
+                usado[v]=false;
+            }
+            
+        }
+        return false;
     }
-    return false;
-}
-
-// Genera la següent permutació lexicogràfica (com la de next_permutation en C++)
-static boolean nextPermutation(int[] a) {
-    int i = a.length - 2;
-    while (i >= 0 && a[i] >= a[i + 1]) i--;
-
-    if (i < 0) return false;
-
-    int j = a.length - 1;
-    while (a[j] <= a[i]) j--;
-
-    int temp = a[i]; a[i] = a[j]; a[j] = temp;
-
-    for (int l = i + 1, r = a.length - 1; l < r; l++, r--) {
-        temp = a[l]; a[l] = a[r]; a[r] = temp;
-    }
-
-    return true;
-}
 
     /*
      * Determinau si el graf `g` (no dirigit) és un arbre. Si ho és, retornau el seu recorregut en
@@ -727,52 +727,46 @@ static boolean nextPermutation(int[] a) {
      * vèrtex.
      */
     static int[] exercici3(int[][] g, int r) {
-    int n = g.length;
-    boolean[] visitat = new boolean[n];
-    List<Integer> postordre = new ArrayList<>();
-    boolean[] hiHaCicle = new boolean[1]; // Flag para detectar ciclos
-
-    dfs(r, -1, g, visitat, postordre, hiHaCicle);
-
-    // Si hay ciclo detectado, no es árbol
-    if (hiHaCicle[0]) return null;
-
-    // Si algún vértice no fue visitado, no es conexo → no es árbol
-    for (int i = 0; i < n; i++) {
-        if (!visitat[i]) return null;
-    }
-
-    // El número de aristas debe ser n - 1 para ser árbol
-    // Contamos las aristas en el grafo
-    int edgeCount = 0;
-    for (int i = 0; i < n; i++) {
-        edgeCount += g[i].length;
-    }
-    // Como el grafo es no dirigido, cada arista está contada dos veces
-    edgeCount /= 2;
-    if (edgeCount != n - 1) return null;
-
-    // Convertimos la lista postorden a array (el postorden está en orden correcto)
-    int[] resultat = new int[n];
-    for (int i = 0; i < n; i++) {
-        resultat[i] = postordre.get(i);
-    }
-
-    return resultat;
-}
-
-static void dfs(int node, int pare, int[][] g, boolean[] visitat, List<Integer> postordre, boolean[] hiHaCicle) {
-    visitat[node] = true;
-    for (int veí : g[node]) {
-        if (!visitat[veí]) {
-            dfs(veí, node, g, visitat, postordre, hiHaCicle);
-        } else if (veí != pare) {
-            // Hay ciclo
-            hiHaCicle[0] = true;
+        int longitud=g.length;
+        boolean [] visitado = new boolean [longitud];
+        int [] postorden = new int [longitud];
+        int [] contador = {0};
+        boolean [] esCiclo = {false};
+        
+        // realiza recorrido profundo desde el nodo raiz
+        recorrerPostorden(g,r,-1,visitado,postorden,contador,esCiclo);
+        
+        // si ha quedado algun vertice sin visitar no es un arbol
+        for (boolean v:visitado){
+            if(!v){
+                return null;
+            }
         }
+        // si hay algun ciclo tampoco es un arbol
+        if (esCiclo[0]){
+            return null;
+        }
+        return Arrays.copyOf(postorden, contador[0]);
+
     }
-    postordre.add(node);
-}
+    
+    static void recorrerPostorden(int [][]g, int nodo, int padre, boolean [] visitado, 
+    int [] postorden, int[] contador, boolean [] esCiclo) {
+        
+        visitado[nodo]=true;
+        // recorremos lista de adyacencia
+        for (int vecino: g[nodo]){
+            if(!visitado[vecino]){
+                recorrerPostorden(g,vecino,nodo,visitado,postorden,contador,esCiclo);
+            }    
+            else if(vecino!=padre){
+                esCiclo[0]=true;
+            }    
+            
+        }
+        // añadir en postorden
+        postorden[contador[0]++]=nodo;                    
+    }
 
     /*
      * Suposau que l'entrada és un mapa com el següent, donat com String per files (vegeu els tests)
@@ -799,73 +793,86 @@ static void dfs(int node, int pare, int[][] g, boolean[] visitat, List<Integer> 
      * Si és impossible, retornau -1.
      */
     static int exercici4(char[][] mapa) {
-    int files = mapa.length;
-    int cols = mapa[0].length;
-
-    int origenX = -1, origenY = -1;
-    int destiX = -1, destiY = -1;
-
-    // Cerquem 'O' i 'D'
-    for (int i = 0; i < files; i++) {
-        for (int j = 0; j < cols; j++) {
-            if (mapa[i][j] == 'O') {
-                origenX = i;
-                origenY = j;
+        int filas=mapa.length;
+        int columnas=mapa[0].length;
+        
+        int filaInicio=-1;
+        int columnaInicio=-1;
+        
+        // encontrar la posicion del origen
+        for (int i=0;i<filas;i++){
+            for (int j=0;j<columnas;j++){
+                if (mapa[i][j]=='O'){
+                    filaInicio=i;
+                    columnaInicio=j;
+                    break;               
+                }
             }
-            if (mapa[i][j] == 'D') {
-                destiX = i;
-                destiY = j;
+            // si se encuentra el origen salir del bucle
+            if (filaInicio!=-1){
+                break;
             }
         }
+        if (filaInicio==-1){
+            return -1;
+        }
+        
+        int tamañoMaximo=filas*columnas;
+        // incicializamos arrays que simulan una cola
+        int [] filasPendientes = new int [tamañoMaximo];
+        int [] columnasPendientes = new int [tamañoMaximo];
+        // indice inicio de la cola
+        int inicio=0;
+        // indice final de la cola
+        int fin=0;
+        
+        // añadimos posicion inicial a la cola
+        filasPendientes[fin]=filaInicio;
+        columnasPendientes[fin]=columnaInicio;
+        fin++;
+        
+        // inicializamos matriz que guarda la distancia minima desde origen
+        // hasta cada celda
+        int [][]distancia = new int [filas][columnas];
+        for (int i=0;i<filas;i++){
+            java.util.Arrays.fill(distancia[i], -1);
+        }
+        distancia[filaInicio][columnaInicio]=0;
+        
+        // vectores de desplazamiento a las celdas adyacentes
+        int [] filaDesplazar = {-1,1,0,0};
+        int [] columnaDesplazar = {0,0,-1,1};
+        
+        while (inicio<fin){
+            int fila = filasPendientes[inicio];
+            int columna = columnasPendientes[inicio];
+            inicio++;
+            
+            if (mapa[fila][columna]=='D'){
+                return distancia[fila][columna];
+            }
+            // recorremos las 4 posibles direcciones
+            for (int k=0;k<4;k++){
+                int nuevaFila=fila + filaDesplazar[k];
+                int nuevaColumna=columna+ columnaDesplazar[k];
+               
+                // comprobamos si la nueva posicion esta dentro del mapa,
+                // no la hayamos visitado ya y que no sea una pared               
+                if (nuevaFila>=0 && nuevaFila<filas && nuevaColumna >=0 && nuevaColumna <columnas 
+                && mapa[nuevaFila][nuevaColumna] != '#' && distancia[nuevaFila][nuevaColumna] ==-1){
+                    distancia[nuevaFila][nuevaColumna]= distancia[fila][columna]+1;
+                    filasPendientes[fin]= nuevaFila;
+                    columnasPendientes[fin]=nuevaColumna;
+                    fin++;
+                    
+                }
+            }
+        }
+        return -1;
+             
     }
-
-    if (origenX == -1 || destiX == -1) return -1;
-
-    // BFS
-    int[][] dist = new int[files][cols];
-    boolean[][] visitat = new boolean[files][cols];
-    int[] dx = { -1, 1, 0, 0 }; // amunt, avall, esquerra, dreta
-    int[] dy = { 0, 0, -1, 1 };
-
-    int[][] cua = new int[files * cols][2];
-    int cap = 0, cuaFi = 0;
-
-    cua[cuaFi][0] = origenX;
-    cua[cuaFi][1] = origenY;
-    cuaFi++;
-    visitat[origenX][origenY] = true;
-    dist[origenX][origenY] = 0;
-
-    while (cap < cuaFi) {
-        int x = cua[cap][0];
-        int y = cua[cap][1];
-        cap++;
-
-        if (x == destiX && y == destiY) {
-            return dist[x][y];
-        }
-
-        for (int d = 0; d < 4; d++) {
-            int nx = x + dx[d];
-            int ny = y + dy[d];
-
-            if (nx >= 0 && nx < files && ny >= 0 && ny < cols &&
-                !visitat[nx][ny] && mapa[nx][ny] != '#') {
-                visitat[nx][ny] = true;
-                dist[nx][ny] = dist[x][y] + 1;
-                cua[cuaFi][0] = nx;
-                cua[cuaFi][1] = ny;
-                cuaFi++;
-            }
-        }
-    }
-
-    return -1; // si no s'arriba mai a 'D'
-}
-
-    /*
-     * Aquí teniu alguns exemples i proves relacionades amb aquests exercicis (vegeu `main`)
-     */
+                
+   
     static void tests() {
 
       final int[][] D2 = { {}, {} };
@@ -940,45 +947,26 @@ static void dfs(int node, int pare, int[][] g, boolean[] visitat, List<Integer> 
      * Pista: https://en.wikipedia.org/wiki/Exponentiation_by_squaring
      */
       
-    // Función para elevar un entero buscando el módulo para que no se nos pase de tamaño
-    static int modPow(int base, int exp, int mod) {
-        long result = 1;
-        long b = base % mod;
-        while (exp > 0) {
-            if ((exp & 1) == 1) {
-                result = (result * b) % mod;
-            }
-            b = (b * b) % mod;
-            exp >>= 1;
-        }
-        return (int) result;
-    }
-     // Función que busca el inverso de e módulo n.
-    static int modInverse(int a, int m) {
-        int m0 = m, x0 = 0, x1 = 1;
-        if (m == 1) return 0;
-        while (a > 1) {
-            int q = a / m;
-            int t = m;
-            m = a % m; a = t;
-            t = x0;
-            x0 = x1 - q * x0;
-            x1 = t;
-        }
-        if (x1 < 0) x1 += m0;
-        return x1;
-    }
+    
     static int[] exercici1(String msg, int n, int e) {
-        int[] bloques = new int[msg.length() / 2];
-        for (int i = 0; i < msg.length(); i += 2) {
-            int c1 = msg.charAt(i);
-            int c2 = msg.charAt(i + 1);
-            int combinado = c1 * 128 + c2;              // <<7 es lo mismo que *128
-            bloques[i / 2] = modPow(combinado, e, n);
+        int longitud = msg.length();
+        int totalBloques = longitud / 2;
+        int [] bloquesCifrados = new int [totalBloques];
+        for (int bloque=0;bloque<totalBloques;bloque++){
+            int posicion= bloque*2;
+            
+            // leer dos caracteres consecutivos
+            int char1=msg.charAt(posicion);
+            int char2=msg.charAt(posicion+1);
+            // convertir los dos caracteres seguidos a numero
+            int numero=char1*128+char2;
+            
+            // aplicamos la exponenciacion modular
+            bloquesCifrados[bloque]= modPow(numero,e,n);
+            
         }
-        return bloques;
+        return bloquesCifrados;       
     }
-
 
     /*
      * Primer, desencriptau el missatge utilitzant xifrat RSA amb la clau pública donada. Després
@@ -995,40 +983,90 @@ static void dfs(int node, int pare, int[][] g, boolean[] visitat, List<Integer> 
      * - n és major que 2¹⁴, i n² és menor que Integer.MAX_VALUE
      */
     static String exercici2(int[] m, int n, int e) {
-      // 1) Factorizamos n
+        
+    // factorizamos n y obtenemos p y q
     int p = 0, q = 0;
-    for (int i = 2; i * i <= n; i++) {
-        if (n % i == 0) {
+    for (int i = 2; i<=Math.sqrt(n); i++) {
+        if (n%i == 0){
             p = i;
             q = n / i;
             break;
         }
     }
-    // 2) Calculamos phi = (p-1)*(q-1)
+    // calculamos phi
     int phi = (p - 1) * (q - 1);
 
-    // 3) Calculamos d = e^{-1} mod phi
+    // calculamos el inverso modular de e mod phi
     int d = modInverse(e, phi);
-
-    // 4) Desencriptamos cada bloque con d
-    int totalChars = m.length * 2;
-    char[] chars = new char[totalChars];
-    for (int i = 0; i < m.length; i++) {
-        int dec = modPow(m[i], d, n);
-        // 5) Descomposición big-endian base 128
-        int c1 = dec / 128;
-        int c2 = dec % 128;
-        chars[2 * i]     = (char) c1;
-        chars[2 * i + 1] = (char) c2;
+    // cada bloque tiene 2 caracteres
+    int longitudMensaje = m.length * 2;
+    // inicializamos array de caracteres
+    byte[] mensajeCifrado = new byte[longitudMensaje];
+    int indice=0;
+    for (int bloque:m) {
+        
+        int descifrado = modPow(bloque, d, n);
+        
+        // descomposicion con base 128
+        int char1 = descifrado / 128;
+        int char2 = descifrado % 128;
+        // guardar caracteres en el array
+        mensajeCifrado[indice++] = (byte) char1;
+        mensajeCifrado[indice++] = (byte) char2;  
     }
-
-    // 6) Construimos y devolvemos el String
-    return new String(chars);
+    // devolvemos el string construido a partir del array de bytes
+    return new String(mensajeCifrado);
     }
-
-
-// Algorisme d'Euclides Extès per trobar invers modular
-
+    
+    // metodo de exponenciacion modular eficiente (exponentiation by squaring)
+    static int modPow(int base, int exponente, int modulo) {
+        
+        if (modulo==0){
+            return 0;
+        }
+        // variables long para tener en cuenta decimales a la hora de operar
+        long resultado = 1;
+        long baseModulo= base%modulo;
+        
+        // bucle exponenciacion rapida
+        while (exponente>0){
+            // si el bit menos significativo es 1 es impar
+            if (exponente%2 !=0){
+                resultado=(resultado*baseModulo) % modulo;
+            }
+            baseModulo = (baseModulo*baseModulo) % modulo;
+            // desplazamos exponente a la derecha
+            exponente = exponente / 2;
+        }
+        return (int) resultado;            
+    }
+    // metodo con el que calculamos el inverso modular de a modulo m
+    static int modInverse(int a, int m) {
+       
+        int m0=m;
+        // coeficientes usados para el encontrar el inverso
+        int x0=0;
+        int x1=1;
+        
+        while (a>1){
+            int cociente = a / m;
+            int temporal = m;
+            // actualizamos m con el resto de la division
+            m=a%m;
+            // guardamos valor temporal
+            a= temporal;
+            // guardamos valor anterior de x0
+            temporal=x0;
+            // calculamos nuevo valor a traves de la relacion del algoritmo
+            x0= x1 - cociente*x0;
+            x1=temporal;
+        } 
+        // si es negativo lo convertimos a positivo agregandole el modulo inicial
+        if (x1<0){
+            x1=x1+m0;
+        }         
+        return x1;  
+    }
 
     static void tests() {
       // Exercici 1
